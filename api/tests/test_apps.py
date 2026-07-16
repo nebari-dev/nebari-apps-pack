@@ -87,6 +87,59 @@ def test_patch_and_delete(client, store):
     assert client.get("/api/v1/apps/apps/docs-site").status_code == 404
 
 
+def test_restart(client, store):
+    client.post("/api/v1/apps", json=make_app_body())
+    resp = client.post("/api/v1/apps/apps/docs-site/restart")
+    assert resp.status_code == 200
+    assert ("apps", "docs-site") in store.restarted
+
+
+def test_restart_missing_app(client):
+    assert client.post("/api/v1/apps/apps/nope/restart").status_code == 404
+
+
+def test_metrics(client):
+    client.post("/api/v1/apps", json=make_app_body())
+    resp = client.get("/api/v1/apps/apps/docs-site/metrics")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["available"] is True
+    assert body["pods"][0]["cpu"] == "12m"
+
+
+def test_cluster_metrics(client):
+    client.post("/api/v1/apps", json=make_app_body())
+    client.post("/api/v1/apps", json=make_app_body(name="two", namespace="team-a"))
+    resp = client.get("/api/v1/analytics/metrics")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["usageAvailable"] is True
+    assert len(body["apps"]) == 2
+    assert body["apps"][0]["cpu"] == 12
+    assert body["apps"][0]["restarts"] == 1
+    assert {n["namespace"] for n in body["byNamespace"]} == {"apps", "team-a"}
+
+
+def test_cluster_metrics_usage_unavailable(client, store):
+    store.metrics_available = False
+    client.post("/api/v1/apps", json=make_app_body())
+    resp = client.get("/api/v1/analytics/metrics")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["usageAvailable"] is False
+    # restart counts still populate from pod status
+    assert body["apps"][0]["restarts"] == 1
+    assert body["apps"][0]["cpu"] == 0
+
+
+def test_metrics_unavailable(client, store):
+    store.metrics_available = False
+    client.post("/api/v1/apps", json=make_app_body())
+    resp = client.get("/api/v1/apps/apps/docs-site/metrics")
+    assert resp.status_code == 200
+    assert resp.json() == {"available": False, "pods": []}
+
+
 def test_logs_and_events(client):
     client.post("/api/v1/apps", json=make_app_body())
     resp = client.get("/api/v1/apps/apps/docs-site/logs")

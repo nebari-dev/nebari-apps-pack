@@ -97,7 +97,9 @@ The zone is configurable via the `appsDomain` value (default `apps.<clusterDomai
 - Git init containers receive user input via environment variables — never interpolated
   into shell — and subdirectories are validated against path traversal.
 - Uploads are size-capped, text-only, and rejected on unsafe archive paths.
-- The API acts with a dedicated ServiceAccount scoped to `App` CRUD + read-only
-  observability; the operator's RBAC covers only the resources it reconciles.
+- The API acts with a dedicated ServiceAccount scoped to `App` CRUD, read-only
+  observability (pods, logs, events, and `metrics.k8s.io`), and a single narrow write —
+  patching child Deployments to roll pods for restart; the operator's RBAC covers only the
+  resources it reconciles.
 - Treat every app as untrusted user code: tenancy is per-namespace, and only opted-in
   namespaces (`nebari.dev/managed=true`) can host apps.

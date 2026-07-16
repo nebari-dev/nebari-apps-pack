@@ -125,6 +125,45 @@ class AppOut(BaseModel):
     status: AppStatus = Field(default_factory=AppStatus)
 
 
+class PodMetric(BaseModel):
+    name: str
+    cpu: str = ""  # e.g. "12m" (millicores)
+    memory: str = ""  # e.g. "34Mi"
+
+
+class AppMetrics(BaseModel):
+    """Instantaneous resource usage, summed per pod, from metrics.k8s.io."""
+
+    available: bool = False
+    pods: list[PodMetric] = Field(default_factory=list)
+
+
+class AppUsage(BaseModel):
+    namespace: str
+    name: str
+    cpu: int = 0  # millicores
+    memory: int = 0  # Mi
+    restarts: int = 0
+
+
+class NamespaceUsage(BaseModel):
+    namespace: str
+    cpu: int = 0  # millicores
+    memory: int = 0  # Mi
+
+
+class ClusterMetrics(BaseModel):
+    """Cluster-wide, right-now usage per app and per namespace.
+
+    usageAvailable is false when the cluster has no metrics server; restart
+    counts come from pod status and are always populated.
+    """
+
+    usageAvailable: bool = False
+    apps: list[AppUsage] = Field(default_factory=list)
+    byNamespace: list[NamespaceUsage] = Field(default_factory=list)
+
+
 class Capabilities(BaseModel):
     appsDomain: str = ""
     sourceTypes: list[str] = Field(default_factory=list)

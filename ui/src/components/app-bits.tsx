@@ -1,7 +1,19 @@
 import { CheckCircle2, CircleDashed, Loader2, PauseCircle, XCircle } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 import { Badge } from '@/ui/badge';
+import { Button } from '@/ui/button';
 import { Card, CardContent } from '@/ui/card';
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/ui/dialog';
+import { Input } from '@/ui/input';
+import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
 
 export function PhaseBadge({ phase }: { phase: string }) {
@@ -27,6 +39,173 @@ export function PhaseBadge({ phase }: { phase: string }) {
 
 export function SourceBadge({ source }: { source: string }) {
   return <Badge variant="ghost" className="border border-border font-mono text-xs">{source}</Badge>;
+}
+
+/** Deterministic accent color from a string so fallback tiles stay stable. */
+const TILE_COLORS = [
+  'bg-blue-500/15 text-blue-600 dark:text-blue-300',
+  'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300',
+  'bg-violet-500/15 text-violet-600 dark:text-violet-300',
+  'bg-amber-500/15 text-amber-600 dark:text-amber-300',
+  'bg-rose-500/15 text-rose-600 dark:text-rose-300',
+  'bg-cyan-500/15 text-cyan-600 dark:text-cyan-300',
+];
+
+function hashIndex(seed: string, mod: number) {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  return Math.abs(hash) % mod;
+}
+
+/** App avatar: the thumbnail if set, else a colored monogram tile. */
+export function AppThumbnail({
+  name,
+  displayName,
+  thumbnail,
+  className,
+}: {
+  name: string;
+  displayName?: string;
+  thumbnail?: string;
+  className?: string;
+}) {
+  const label = (displayName || name).trim();
+  const initials = label.slice(0, 2).toUpperCase();
+  if (thumbnail) {
+    return (
+      <img
+        src={thumbnail}
+        alt=""
+        className={cn('shrink-0 rounded-md border border-border object-cover', className)}
+      />
+    );
+  }
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        'flex shrink-0 items-center justify-center rounded-md border border-border font-semibold text-xs',
+        TILE_COLORS[hashIndex(name, TILE_COLORS.length)],
+        className,
+      )}
+    >
+      {initials}
+    </div>
+  );
+}
+
+/** Minimal inline sparkline for a short numeric series. */
+export function Sparkline({
+  data,
+  className,
+  width = 120,
+  height = 32,
+}: {
+  data: number[];
+  className?: string;
+  width?: number;
+  height?: number;
+}) {
+  if (data.length < 2) {
+    return <div className={cn('text-muted-foreground text-xs', className)}>collecting…</div>;
+  }
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const span = max - min || 1;
+  const step = width / (data.length - 1);
+  const points = data
+    .map((v, i) => `${(i * step).toFixed(1)},${(height - ((v - min) / span) * height).toFixed(1)}`)
+    .join(' ');
+  return (
+    <svg
+      className={cn('text-primary', className)}
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label="usage trend"
+    >
+      <polyline
+        points={points}
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+/**
+ * Destructive delete confirmation that requires typing the app name — guards an
+ * action that also tears down routing, TLS, and the OIDC client.
+ */
+export function ConfirmDeleteDialog({
+  open,
+  onOpenChange,
+  appName,
+  displayName,
+  loading,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  appName: string;
+  displayName?: string;
+  loading?: boolean;
+  onConfirm: () => void;
+}) {
+  const [typed, setTyped] = useState('');
+  const matches = typed.trim() === appName;
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setTyped('');
+        onOpenChange(next);
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete {displayName || appName}?</DialogTitle>
+          <DialogDescription>
+            This removes the app, its routing, TLS certificate, and OIDC client. It cannot be
+            undone.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-1.5">
+          <Label htmlFor="confirm-name">
+            Type <span className="font-mono font-semibold text-foreground">{appName}</span> to
+            confirm
+          </Label>
+          <Input
+            id="confirm-name"
+            autoComplete="off"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && matches && !loading) onConfirm();
+            }}
+          />
+        </div>
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline">Cancel</Button>} />
+          <Button variant="destructive" disabled={!matches} loading={loading} onClick={onConfirm}>
+            Delete app
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/** Parse "12m" → 12 (millicores) or "34Mi" → 34 (Mi) for charting. */
+export function metricValue(raw: string): number {
+  const match = raw.match(/^([\d.]+)/);
+  return match ? Number(match[1]) : 0;
 }
 
 export function StatCard({

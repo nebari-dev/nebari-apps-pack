@@ -12,6 +12,7 @@ GROUP = "apps.nebari.dev"
 VERSION = "v1alpha1"
 PLURAL = "apps"
 MANAGED_LABEL = "nebari.dev/managed"
+APP_LABEL = "apps.nebari.dev/app"
 
 
 class NotFoundError(Exception):
@@ -41,6 +42,14 @@ class AppStore(Protocol):
 
     def app_events(self, namespace: str, app_name: str) -> list[dict[str, Any]]: ...
 
+    def restart_app(self, namespace: str, app_name: str) -> None: ...
+
+    def pod_metrics(self, namespace: str, app_name: str) -> list[dict[str, Any]]: ...
+
+    def cluster_pod_metrics(self) -> list[dict[str, Any]]: ...
+
+    def app_restarts(self) -> list[dict[str, Any]]: ...
+
 
 class KubernetesAppStore:
     """AppStore backed by the real cluster (in-cluster or kubeconfig)."""
@@ -55,6 +64,7 @@ class KubernetesAppStore:
 
         self._custom = client.CustomObjectsApi()
         self._core = client.CoreV1Api()
+        self._apps = client.AppsV1Api()
 
     def _wrap(self, exc: Exception) -> Exception:
         from kubernetes.client.rest import ApiException
@@ -147,3 +157,123 @@ class KubernetesAppStore:
                 )
         related.sort(key=lambda e: e["lastTimestamp"], reverse=True)
         return related
+
+    def restart_app(self, namespace: str, app_name: str) -> None:
+        """Roll the app's pods, like `kubectl rollout restart`."""
+        from datetime import datetime, timezone
+
+        stamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+        patch = {
+            "spec": {
+                "template": {
+                    "metadata": {
+                        "annotations": {"kubectl.kubernetes.io/restartedAt": stamp}
+                    }
+                }
+            }
+        }
+        try:
+            self._apps.patch_namespaced_deployment(f"app-{app_name}", namespace, patch)
+        except Exception as exc:  # noqa: BLE001
+            raise self._wrap(exc) from exc
+
+    def pod_metrics(self, namespace: str, app_name: str) -> list[dict[str, Any]]:
+        try:
+            res = self._custom.list_namespaced_custom_object(
+                "metrics.k8s.io",
+                "v1beta1",
+                namespace,
+                "pods",
+                label_selector=f"apps.nebari.dev/app={app_name}",
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise self._wrap(exc) from exc
+        out: list[dict[str, Any]] = []
+        for item in res.get("items", []):
+            cpu_milli = 0
+            mem_mi = 0.0
+            for container in item.get("containers", []):
+                usage = container.get("usage", {})
+                cpu_milli += _cpu_to_milli(usage.get("cpu", "0"))
+                mem_mi += _mem_to_mi(usage.get("memory", "0"))
+            out.append(
+                {
+                    "name": item.get("metadata", {}).get("name", ""),
+                    "cpu": f"{cpu_milli}m",
+                    "memory": f"{round(mem_mi)}Mi",
+                }
+            )
+        return out
+
+    def cluster_pod_metrics(self) -> list[dict[str, Any]]:
+        """Per-pod usage for every app pod in the cluster, keyed by app + namespace.
+
+        Raises NotFoundError when the metrics API is not installed so callers can
+        report usage as unavailable rather than failing.
+        """
+        try:
+            res = self._custom.list_cluster_custom_object(
+                "metrics.k8s.io", "v1beta1", "pods", label_selector=APP_LABEL
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise self._wrap(exc) from exc
+        out: list[dict[str, Any]] = []
+        for item in res.get("items", []):
+            meta = item.get("metadata", {})
+            app = meta.get("labels", {}).get(APP_LABEL)
+            if not app:
+                continue
+            cpu = sum(_cpu_to_milli(c.get("usage", {}).get("cpu", "0")) for c in item.get("containers", []))
+            mem = sum(_mem_to_mi(c.get("usage", {}).get("memory", "0")) for c in item.get("containers", []))
+            out.append({"namespace": meta.get("namespace", ""), "app": app, "cpu": cpu, "memory": mem})
+        return out
+
+    def app_restarts(self) -> list[dict[str, Any]]:
+        """Total container restarts per app pod across the cluster (from pod status)."""
+        try:
+            pods = self._core.list_pod_for_all_namespaces(label_selector=APP_LABEL)
+        except Exception as exc:  # noqa: BLE001
+            raise self._wrap(exc) from exc
+        out: list[dict[str, Any]] = []
+        for pod in pods.items:
+            app = (pod.metadata.labels or {}).get(APP_LABEL)
+            if not app:
+                continue
+            restarts = sum(cs.restart_count for cs in (pod.status.container_statuses or []))
+            out.append({"namespace": pod.metadata.namespace or "", "app": app, "restarts": restarts})
+        return out
+
+
+def _cpu_to_milli(value: str) -> int:
+    """Parse a Kubernetes CPU quantity to integer millicores."""
+    value = value.strip()
+    if not value:
+        return 0
+    if value.endswith("n"):
+        return round(int(value[:-1]) / 1_000_000)
+    if value.endswith("u"):
+        return round(int(value[:-1]) / 1_000)
+    if value.endswith("m"):
+        return int(value[:-1])
+    return round(float(value) * 1000)
+
+
+def _mem_to_mi(value: str) -> float:
+    """Parse a Kubernetes memory quantity to mebibytes (Mi)."""
+    value = value.strip()
+    if not value:
+        return 0.0
+    factors = {
+        "Ki": 1 / 1024,
+        "Mi": 1.0,
+        "Gi": 1024.0,
+        "Ti": 1024.0 * 1024,
+        "K": 1000 / (1024 * 1024),
+        "M": 1_000_000 / (1024 * 1024),
+        "G": 1_000_000_000 / (1024 * 1024),
+    }
+    for suffix, factor in factors.items():
+        if value.endswith(suffix):
+            return float(value[: -len(suffix)]) * factor
+    # plain bytes
+    return float(value) / (1024 * 1024)

@@ -74,10 +74,50 @@ export interface AppCreate {
   access: AppAccess;
 }
 
+export interface AppPatch {
+  displayName?: string;
+  description?: string;
+  thumbnail?: string;
+  source?: AppSource;
+  runtime?: AppRuntime;
+  access?: AppAccess;
+}
+
+export interface PodMetric {
+  name: string;
+  cpu: string;
+  memory: string;
+}
+
+export interface AppMetrics {
+  available: boolean;
+  pods: PodMetric[];
+}
+
 export interface Capabilities {
   appsDomain: string;
   sourceTypes: SourceType[];
   namespaces: string[];
+}
+
+export interface AppUsage {
+  namespace: string;
+  name: string;
+  cpu: number; // millicores
+  memory: number; // Mi
+  restarts: number;
+}
+
+export interface NamespaceUsage {
+  namespace: string;
+  cpu: number;
+  memory: number;
+}
+
+export interface ClusterMetrics {
+  usageAvailable: boolean;
+  apps: AppUsage[];
+  byNamespace: NamespaceUsage[];
 }
 
 export interface AnalyticsSummary {

@@ -262,6 +262,30 @@ async def start_app(ctx: Context, namespace: str, name: str) -> Any:
 
 
 @mcp.tool
+async def restart_app(ctx: Context, namespace: str, name: str) -> Any:
+    """Roll the app's pods without changing its spec (like `kubectl rollout restart`).
+    Use after external content or config changes, or to recover a wedged pod. Fails if the
+    app is stopped (start_app first)."""
+    try:
+        async with await _api(ctx) as api:
+            return await api.post(f"/apps/{namespace}/{name}/restart")
+    except ApiError as exc:
+        return _error(exc)
+
+
+@mcp.tool
+async def get_app_metrics(ctx: Context, namespace: str, name: str) -> Any:
+    """Instantaneous CPU (millicores) and memory (Mi) usage per pod, from metrics.k8s.io.
+    Returns {available, pods:[{name, cpu, memory}]}; available=false when the cluster has no
+    metrics server. Use to judge whether an app needs more replicas or resources."""
+    try:
+        async with await _api(ctx) as api:
+            return await api.get(f"/apps/{namespace}/{name}/metrics")
+    except ApiError as exc:
+        return _error(exc)
+
+
+@mcp.tool
 async def remove_app(ctx: Context, namespace: str, name: str) -> dict[str, Any]:
     """Delete an app permanently. Cascades: workload, routing, TLS certificate, and OIDC
     client are all removed. There is no undo - confirm with the user first."""

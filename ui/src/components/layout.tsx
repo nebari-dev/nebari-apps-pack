@@ -1,4 +1,4 @@
-import { ChevronDown, LayoutDashboard, Monitor, Moon, Rocket, Sun } from 'lucide-react';
+import { BarChart3, ChevronDown, LayoutDashboard, Monitor, Moon, Rocket, Sun } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import nebariLogo from '@/assets/nebari-logo.svg';
@@ -21,6 +21,7 @@ import { TooltipProvider } from '@/ui/tooltip';
 const NAV = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard, end: true },
   { to: '/apps', label: 'Apps', icon: Rocket, end: false },
+  { to: '/metrics', label: 'Metrics', icon: BarChart3, end: false },
 ];
 
 export function Layout() {

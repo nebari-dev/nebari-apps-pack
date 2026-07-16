@@ -43,6 +43,7 @@ The API validates the signature against the realm JWKS, and stamps the caller's
 | `DELETE /apps/{ns}/{name}` | Delete (cascades to all children). |
 | `POST /apps/{ns}/{name}/stop` | Scale to zero. |
 | `POST /apps/{ns}/{name}/start` | Scale back to one. |
+| `POST /apps/{ns}/{name}/restart` | Roll the app's pods (like `kubectl rollout restart`) without changing the spec. `409` if the app is stopped. |
 
 ### Observability
 
@@ -51,7 +52,9 @@ The API validates the signature against the realm JWKS, and stamps the caller's
 | `GET /apps/{ns}/{name}/status` | Phase, URL, replicas, conditions, message. |
 | `GET /apps/{ns}/{name}/logs?lines=200&container=` | Recent pod logs (`lines` 1–5000, default 200). |
 | `GET /apps/{ns}/{name}/events` | Kubernetes events for the app's resources. |
+| `GET /apps/{ns}/{name}/metrics` | Instantaneous per-pod CPU (millicores) and memory (Mi) from `metrics.k8s.io`. `{available, pods:[{name, cpu, memory}]}`; `available:false` when the cluster has no metrics server. |
 | `GET /analytics/summary?namespace=` | Totals and breakdowns by phase / source type / namespace, plus replica readiness. |
+| `GET /analytics/metrics` | Cluster-wide resource usage aggregated per app and per namespace, plus restart counts. `{usageAvailable, apps:[{namespace, name, cpu, memory, restarts}], byNamespace:[…]}`. Restart counts always populate (pod status); CPU/memory require a metrics server. |
 
 ## Create request
 

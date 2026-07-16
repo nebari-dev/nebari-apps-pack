@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import { Activity, Boxes, Layers, Rocket } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { BarList, PhaseBadge, SourceBadge, StatCard } from '@/components/app-bits';
+import { AppThumbnail, BarList, PhaseBadge, SourceBadge, StatCard } from '@/components/app-bits';
+import { Onboarding } from '@/components/onboarding';
 import { api } from '@/lib/api';
 import { Button } from '@/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/ui/card';
@@ -24,6 +25,18 @@ export function DashboardPage() {
     .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''))
     .slice(0, 5);
   const running = summary?.byPhase.Running ?? 0;
+
+  if (summary && summary.total === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="font-semibold text-2xl">Dashboard</h1>
+          <p className="text-muted-foreground text-sm">Web applications running on this Nebari cluster.</p>
+        </div>
+        <Onboarding />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -97,16 +110,16 @@ export function DashboardPage() {
             <ul className="divide-y divide-border">
               {recent.map((app) => (
                 <li key={`${app.namespace}/${app.name}`} className="flex items-center justify-between gap-3 py-2">
-                  <div className="min-w-0">
-                    <Link
-                      to={`/apps/${app.namespace}/${app.name}`}
-                      className="font-medium text-sm hover:underline"
-                    >
-                      {app.displayName || app.name}
-                    </Link>
-                    <p className="truncate text-muted-foreground text-xs">
-                      {app.namespace} · {app.owner || 'unknown owner'}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <AppThumbnail name={app.name} displayName={app.displayName} thumbnail={app.thumbnail} className="size-8" />
+                    <div className="min-w-0">
+                      <Link to={`/apps/${app.namespace}/${app.name}`} className="font-medium text-sm hover:underline">
+                        {app.displayName || app.name}
+                      </Link>
+                      <p className="truncate text-muted-foreground text-xs">
+                        {app.namespace} · {app.owner || 'unknown owner'}
+                      </p>
+                    </div>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
                     <SourceBadge source={app.source?.type ?? '—'} />

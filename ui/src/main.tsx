@@ -7,7 +7,9 @@ import { initAuth } from '@/lib/auth';
 import { AppDetailPage } from '@/pages/app-detail';
 import { AppsPage } from '@/pages/apps';
 import { DashboardPage } from '@/pages/dashboard';
+import { EditPage } from '@/pages/edit';
 import { LaunchPage } from '@/pages/launch';
+import { MetricsPage } from '@/pages/metrics';
 import { Toaster } from '@/ui/toast';
 import '@/index.css';
 
@@ -29,6 +31,8 @@ createRoot(document.getElementById('root')!).render(
             <Route index element={<DashboardPage />} />
             <Route path="apps" element={<AppsPage />} />
             <Route path="apps/:namespace/:name" element={<AppDetailPage />} />
+            <Route path="apps/:namespace/:name/edit" element={<EditPage />} />
+            <Route path="metrics" element={<MetricsPage />} />
             <Route path="launch" element={<LaunchPage />} />
           </Route>
         </Routes>

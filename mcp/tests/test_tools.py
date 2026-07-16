@@ -41,6 +41,8 @@ async def test_tool_catalog():
         "update_app",
         "stop_app",
         "start_app",
+        "restart_app",
+        "get_app_metrics",
         "remove_app",
     }
 
@@ -105,6 +107,23 @@ async def test_stop_start_remove(store):
     result = await call("remove_app", {"namespace": "apps", "name": "docs-site"})
     assert result["deleted"] == "apps/docs-site"
     assert store.apps == {}
+
+
+async def test_restart(store):
+    await call("launch_app", LAUNCH_ARGS)
+    await call("restart_app", {"namespace": "apps", "name": "docs-site"})
+    assert ("apps", "docs-site") in store.restarted
+
+
+async def test_metrics(store):
+    await call("launch_app", LAUNCH_ARGS)
+    metrics = await call("get_app_metrics", {"namespace": "apps", "name": "docs-site"})
+    assert metrics["available"] is True
+    assert metrics["pods"][0]["cpu"] == "12m"
+
+    store.metrics_available = False
+    unavailable = await call("get_app_metrics", {"namespace": "apps", "name": "docs-site"})
+    assert unavailable == {"available": False, "pods": []}
 
 
 async def test_logs_and_missing_app():

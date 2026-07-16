@@ -18,9 +18,13 @@ from .models import (
     SOURCE_TYPES,
     AnalyticsSummary,
     AppCreate,
+    AppMetrics,
     AppOut,
     AppPatch,
+    AppUsage,
     Capabilities,
+    ClusterMetrics,
+    NamespaceUsage,
 )
 from .upload import files_from_upload
 
@@ -154,6 +158,15 @@ def create_app(store: AppStore | None = None) -> FastAPI:
     def start_app(namespace: str, name: str, store: Store, user: Me) -> AppOut:
         return _scale(store, namespace, name, 1)
 
+    @app.post(PREFIX + "/apps/{namespace}/{name}/restart", response_model=AppOut)
+    def restart_app(namespace: str, name: str, store: Store, user: Me) -> AppOut:
+        must_get(store, namespace, name)
+        try:
+            store.restart_app(namespace, name)
+        except NotFoundError as exc:
+            raise HTTPException(409, f"app {namespace}/{name} is not running") from exc
+        return crmod.from_cr(must_get(store, namespace, name))
+
     # --------------------------------------------------------- observability
     @app.get(PREFIX + "/apps/{namespace}/{name}/status")
     def app_status(namespace: str, name: str, store: Store, user: Me) -> dict[str, Any]:
@@ -179,6 +192,15 @@ def create_app(store: AppStore | None = None) -> FastAPI:
         must_get(store, namespace, name)
         return store.app_events(namespace, name)
 
+    @app.get(PREFIX + "/apps/{namespace}/{name}/metrics", response_model=AppMetrics)
+    def app_metrics(namespace: str, name: str, store: Store, user: Me) -> AppMetrics:
+        must_get(store, namespace, name)
+        try:
+            pods = store.pod_metrics(namespace, name)
+        except NotFoundError:
+            return AppMetrics(available=False, pods=[])
+        return AppMetrics(available=True, pods=pods)
+
     # -------------------------------------------------------------- analytics
     @app.get(PREFIX + "/analytics/summary", response_model=AnalyticsSummary)
     def analytics_summary(store: Store, user: Me, namespace: str | None = None) -> AnalyticsSummary:
@@ -196,6 +218,49 @@ def create_app(store: AppStore | None = None) -> FastAPI:
             readyReplicas=ready,
             desiredReplicas=desired,
         )
+
+    @app.get(PREFIX + "/analytics/metrics", response_model=ClusterMetrics)
+    def cluster_metrics(store: Store, user: Me) -> ClusterMetrics:
+        """Right-now resource usage per app and namespace, plus restart counts.
+
+        Restart counts always populate (pod status); CPU/memory populate only when
+        the cluster has a metrics server (usageAvailable=false otherwise).
+        """
+        # (namespace, app) -> aggregated usage across its pods
+        agg: dict[tuple[str, str], dict[str, int]] = {}
+
+        def entry(ns: str, name: str) -> dict[str, int]:
+            return agg.setdefault((ns, name), {"cpu": 0, "memory": 0, "restarts": 0})
+
+        usage_available = True
+        try:
+            for pod in store.cluster_pod_metrics():
+                e = entry(pod["namespace"], pod["app"])
+                e["cpu"] += int(pod.get("cpu", 0))
+                e["memory"] += round(pod.get("memory", 0))
+        except NotFoundError:
+            usage_available = False
+
+        for pod in store.app_restarts():
+            entry(pod["namespace"], pod["app"])["restarts"] += int(pod.get("restarts", 0))
+
+        apps = [
+            AppUsage(namespace=ns, name=name, cpu=v["cpu"], memory=v["memory"], restarts=v["restarts"])
+            for (ns, name), v in agg.items()
+        ]
+        apps.sort(key=lambda a: (a.cpu, a.memory), reverse=True)
+
+        ns_agg: dict[str, dict[str, int]] = {}
+        for a in apps:
+            n = ns_agg.setdefault(a.namespace, {"cpu": 0, "memory": 0})
+            n["cpu"] += a.cpu
+            n["memory"] += a.memory
+        by_namespace = [
+            NamespaceUsage(namespace=ns, cpu=v["cpu"], memory=v["memory"]) for ns, v in ns_agg.items()
+        ]
+        by_namespace.sort(key=lambda n: (n.cpu, n.memory), reverse=True)
+
+        return ClusterMetrics(usageAvailable=usage_available, apps=apps, byNamespace=by_namespace)
 
     return app
 

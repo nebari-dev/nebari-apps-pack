@@ -27,6 +27,8 @@ class FakeStore:
         self.apps: dict[tuple[str, str], dict[str, Any]] = {}
         self.namespaces = ["apps", "team-a"]
         self.logs = "hello from pod\n"
+        self.restarted: list[tuple[str, str]] = []
+        self.metrics_available = True
 
     def list_apps(self, namespace: str | None) -> list[dict[str, Any]]:
         return [
@@ -68,6 +70,24 @@ class FakeStore:
 
     def app_events(self, namespace: str, app_name: str) -> list[dict[str, Any]]:
         return []
+
+    def restart_app(self, namespace: str, app_name: str) -> None:
+        if (namespace, app_name) not in self.apps:
+            raise NotFoundError(f"app-{app_name}")
+        self.restarted.append((namespace, app_name))
+
+    def pod_metrics(self, namespace: str, app_name: str) -> list[dict[str, Any]]:
+        if not self.metrics_available:
+            raise NotFoundError("metrics.k8s.io not available")
+        return [{"name": f"app-{app_name}-abc123", "cpu": "12m", "memory": "34Mi"}]
+
+    def cluster_pod_metrics(self) -> list[dict[str, Any]]:
+        if not self.metrics_available:
+            raise NotFoundError("metrics.k8s.io not available")
+        return [{"namespace": ns, "app": name, "cpu": 12, "memory": 34} for (ns, name) in self.apps]
+
+    def app_restarts(self) -> list[dict[str, Any]]:
+        return [{"namespace": ns, "app": name, "restarts": 1} for (ns, name) in self.apps]
 
 
 @pytest.fixture

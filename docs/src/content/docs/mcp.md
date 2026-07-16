@@ -64,6 +64,8 @@ anonymously.
 | `get_app_logs` | Recent pod logs — first stop when phase is `Failed`. |
 | `update_app` | Patch spec (source, runtime, access, …). |
 | `stop_app` / `start_app` | Scale to zero / back up. |
+| `restart_app` | Roll the app's pods without changing the spec; fails if the app is stopped. |
+| `get_app_metrics` | Instantaneous CPU/memory per pod (`available:false` when the cluster has no metrics server). |
 | `remove_app` | Delete permanently (cascades; the tool description tells agents to confirm with the user). |
 
 Every tool returns structured JSON. Errors carry the API's human-readable `detail`, and a

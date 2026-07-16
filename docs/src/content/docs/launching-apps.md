@@ -111,9 +111,11 @@ natural language through the **apps-mcp** server — `launch_app` is idempotent 
 |---|---|---|---|
 | Stop (scale to 0) | detail page → Stop | `POST .../apps/{ns}/{name}/stop` | set `spec.runtime.replicas: 0` |
 | Start | detail page → Start | `POST .../apps/{ns}/{name}/start` | set `spec.runtime.replicas: 1` |
-| Update | — (planned) | `PATCH .../apps/{ns}/{name}` | edit the CR |
+| Update | detail page → Edit | `PATCH .../apps/{ns}/{name}` | edit the CR |
+| Restart (roll pods) | detail page → Restart | `POST .../apps/{ns}/{name}/restart` | `kubectl rollout restart deploy/app-<name>` |
 | Logs | detail page → Logs | `GET .../apps/{ns}/{name}/logs` | `kubectl logs -l apps.nebari.dev/app=<name>` |
-| Delete | detail page → Delete | `DELETE .../apps/{ns}/{name}` | `kubectl delete app <name>` |
+| Metrics | Metrics page / detail cards | `GET .../apps/{ns}/{name}/metrics`, `GET /analytics/metrics` | `kubectl top pods -l apps.nebari.dev/app=<name>` |
+| Delete | detail page → Delete (type to confirm) | `DELETE .../apps/{ns}/{name}` | `kubectl delete app <name>` |
 
 Changing inline content rolls the pods automatically (the pod template carries a content
 checksum), so an update is always a clean redeploy.

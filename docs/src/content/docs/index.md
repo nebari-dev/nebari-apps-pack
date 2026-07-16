@@ -26,8 +26,9 @@ https://<subdomain>.apps.<cluster-domain>
 - **apps-api** — REST API for CRUD, status, logs, events, analytics, and direct
   **zip/.html upload**.
 - **apps-ui** — a dashboard built on the [Nebari design system](https://github.com/nebari-dev/nebari-design):
-  analytics, an apps table, per-app detail pages with live logs and events, and a launch
-  form with drag-and-drop upload.
+  analytics plus a cluster-wide **Metrics** page, a searchable / sortable apps table with bulk
+  actions, per-app detail pages with live logs, events, usage, restart, and a copyable manifest,
+  and launch / edit forms (drag-and-drop upload, git, or PVC).
 - **apps-mcp** — an MCP server at `/mcp` so coding agents launch and manage apps with
   natural language (Keycloak device-flow auth).
 - **`new-nebari-app` skill** — teaches Claude Code to scaffold apps in the expected layout
