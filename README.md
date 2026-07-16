@@ -77,7 +77,7 @@ writes `App` CRs directly via a ServiceAccount, so **GitHub/GitOps is optional, 
 ```
 nebari-apps-pack/
   pack-metadata.yaml          # dashboard registration
-  charts/nebari-apps/         # Helm chart (App CRD + operator + api + ui)
+  charts/nebari-apps/         # Helm chart (App CRD + operator + api + ui + mcp)
   operator/                   # Go operator (controller-runtime)
   api/                        # FastAPI backend (CRUD + observability + upload)
   ui/                         # React frontend (Nebari design system)
@@ -85,10 +85,10 @@ nebari-apps-pack/
   skill/                      # new-nebari-app scaffolding skill (Claude Code)
   dev/                        # local dev loop (kind + full Nebari stack)
   examples/                   # sample App CRs
-  docs/
+  docs/                       # user guide (Astro Starlight → packs.nebari.dev)
+    src/content/docs/         # guide pages (getting started, MCP, skill, references)
     DESIGN.md                 # comprehensive design document
     PLAN.md                   # phased implementation plan
-    local-development.md      # running the pack locally with kind
 ```
 
 ---
@@ -196,7 +196,7 @@ kubectl get apps -n <your-namespace> -w   # wait for Phase=Running, then open th
 
 ```bash
 cd dev
-make up          # cluster + operator + api + ui + example app (plain HTTP, no auth)
+make up          # cluster + operator + api + ui + mcp + example app (plain HTTP, no auth)
 open http://apps.nebari.local              # the UI
 open http://docs-site.apps.nebari.local    # the example app
 ```
@@ -213,7 +213,9 @@ The user guide lives at **[packs.nebari.dev/nebari-apps-pack](https://packs.neba
 (an [Astro Starlight](https://starlight.astro.build/) site in [`docs/`](docs/); run it locally
 with `cd docs && bun install && bun run dev`):
 
-- Getting started, launching apps (UI / upload / API / kubectl), and local development
+- Getting started, launching apps (UI / upload / API / kubectl), the **MCP server**
+  (connecting agents, device-flow auth, tool list), the scaffolding skill, and local
+  development
 - Reference: the App CRD, the REST API, and architecture & auth
 
 Design documents stay in the repository:

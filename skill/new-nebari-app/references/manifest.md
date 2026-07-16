@@ -13,7 +13,7 @@ name: docs-site                # lowercase letters/digits/hyphens, max 53 chars
 namespace: apps                # must be a namespace from describe_cluster
 
 # Presentation
-displayName: "Docs Site"
+displayName: "Docs Site"                # required, max 64 chars
 description: "Team documentation"       # optional, max 256 chars
 
 source:
@@ -56,6 +56,10 @@ access:
 | `runtime.replicas` | `replicas` |
 | `access.public` / `access.groups` | `public` / `groups` |
 | `access.subdomain` | `subdomain` |
+
+The manifest covers everything `launch_app` accepts. The `App` resource has a few extra
+fields with no manifest/tool equivalent (`spec.owner`, `spec.thumbnail`, `access.users`,
+`runtime.keepAlive`) — set those via the API (`PATCH`) or `kubectl` after launch if needed.
 
 `files` constraints (they mirror the API's upload rules): must include `index.html` at the
 root; text assets only (`.html .css .js .mjs .json .svg .txt .md .xml .csv .webmanifest .map`);

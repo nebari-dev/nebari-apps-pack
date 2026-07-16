@@ -21,13 +21,14 @@ helm install nebari-apps charts/nebari-apps \
 kubectl label namespace nebari-apps nebari.dev/managed=true
 ```
 
-This deploys three components:
+This deploys four components:
 
 | Component | Where it ends up |
 |---|---|
 | **apps-operator** | Watches `App` resources cluster-wide. |
 | **apps-api** | In-cluster Service; the UI proxies `/api` to it same-origin. |
 | **apps-ui** | `https://apps.example.ai` — with a landing-page tile ("Apps"). |
+| **apps-mcp** | `https://apps.example.ai/mcp` — agent tools, proxied by the UI (see [MCP server](/mcp/)). |
 
 Every app launched afterwards gets `https://<subdomain>.apps.example.ai`.
 
@@ -42,6 +43,7 @@ Every app launched afterwards gets `https://<subdomain>.apps.example.ai`.
 | `keycloak.realm` | `nebari` | Keycloak realm. |
 | `keycloak.internalUrl` | — | Optional in-cluster Keycloak URL (split horizon) for JWKS. |
 | `api.auth.enabled` | `true` | Keycloak JWT auth for the API + keycloak-js login in the UI. |
+| `api.allowedNamespaces` | `["apps"]` | Namespaces users may launch into via the API/UI/MCP. Empty list = every namespace labeled `nebari.dev/managed=true`. |
 | `ui.hostname` | `<appsDomain>` | Where the UI itself is served. |
 | `gateway` | `public` | Shared Gateway apps attach to (`public` \| `internal`). |
 | `staticImage` | `nginxinc/nginx-unprivileged:1.27-alpine` | Serves static app content. |
@@ -55,6 +57,10 @@ Namespaces that host apps must also opt in:
 kubectl create namespace apps
 kubectl label namespace apps nebari.dev/managed=true
 ```
+
+> `apps` is the default entry in `api.allowedNamespaces` — to launch into other namespaces
+> from the UI/API/MCP, add them to that list (or set it empty to allow every managed
+> namespace). `kubectl apply` is only gated by the namespace label.
 
 Then either open the UI at `https://apps.example.ai` and use the launch form, or apply a
 sample `App`:
@@ -71,6 +77,18 @@ docs-site   inline   Running   https://docs-site.apps.example.ai
 
 When `PHASE` reaches `Running`, open the URL. Private apps redirect to Keycloak; public apps
 (`access.public: true`) are reachable anonymously.
+
+## Connect a coding agent
+
+Point Claude Code (or any MCP client) at the cluster and launch with natural language:
+
+```bash
+claude mcp add --transport http nebari-apps https://apps.example.ai/mcp
+```
+
+The first tool call will ask you to log in via the Keycloak device flow (the agent shows a
+verification URL and code). See the [MCP server guide](/mcp/) for the tool list and the
+[scaffolding skill](/skill/) for generating apps the agent can launch.
 
 ## Verify a deployment
 

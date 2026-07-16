@@ -7,8 +7,8 @@ The `dev/` directory provides a Makefile for local development with
 [software-pack-template](https://github.com/nebari-dev/software-pack-template) dev flow. It
 creates a kind cluster with the full Nebari infrastructure stack — MetalLB, Envoy Gateway,
 cert-manager, Keycloak, and the nebari-operator (pinned to `v0.1.0-alpha.19`) — then builds
-and deploys every pack component: the **apps-operator**, the **apps-api**, and the
-**apps-ui**.
+and deploys every pack component: the **apps-operator**, the **apps-api**, the
+**apps-ui**, and the **apps-mcp** server.
 
 ## Prerequisites
 
@@ -25,6 +25,7 @@ make up
 
 open http://apps.nebari.local              # the UI
 open http://docs-site.apps.nebari.local    # the example app
+# MCP endpoint for coding agents: http://apps.nebari.local/mcp
 ```
 
 `make up` does, in order:
@@ -33,8 +34,8 @@ open http://docs-site.apps.nebari.local    # the example app
    the nebari-operator's dev scripts to install Envoy Gateway, cert-manager, Keycloak
    (realm `nebari`, login `admin` / `nebari-admin`), and the nebari-operator itself.
    Creates the `apps` namespace labeled `nebari.dev/managed=true`.
-2. **`images`** — builds `apps-operator:dev`, `apps-api:dev`, and `apps-ui:dev` and loads
-   them into the kind cluster.
+2. **`images`** — builds `apps-operator:dev`, `apps-api:dev`, `apps-ui:dev`, and
+   `apps-mcp:dev` and loads them into the kind cluster.
 3. **`deploy`** — installs the chart with `clusterDomain=nebari.local` and
    **`tls.enabled=false`** (plain HTTP — no certificate warnings locally).
 4. Applies the inline example App and waits for `Running`.
@@ -43,7 +44,7 @@ open http://docs-site.apps.nebari.local    # the example app
 ## Everyday loop
 
 ```bash
-make redeploy       # rebuild all three images + restart the Deployments
+make redeploy       # rebuild all four images + restart the Deployments
 make up-git         # also deploy the git-sourced, SSO-protected example
 make update-hosts   # refresh /etc/hosts after launching apps
 make port-forward   # host access on macOS/Docker Desktop (see below)
@@ -73,6 +74,20 @@ browsers auto-upgrade bare hostnames to https, which is disabled locally.
 and JWT validation (API) cannot complete locally. Launched apps still get their
 SecurityPolicies; on a real Nebari cluster with a public Keycloak everything works end to
 end.
+
+## Connecting a coding agent locally
+
+The MCP server is proxied on the same hostname as the UI, so a local agent can drive the
+whole stack:
+
+```bash
+claude mcp add --transport http nebari-apps http://apps.nebari.local/mcp
+```
+
+Because local dev runs with auth disabled, the `authenticate` tool reports `not_required`
+and every tool works anonymously — ask the agent to "launch the site in ./my-site as a
+public app called my-site" and it will call `launch_app` directly. See the
+[MCP server guide](/mcp/) for the full tool list.
 
 ## Poking at the stack
 

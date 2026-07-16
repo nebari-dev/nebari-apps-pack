@@ -49,7 +49,7 @@ The API validates the signature against the realm JWKS, and stamps the caller's
 | Method & path | Description |
 |---|---|
 | `GET /apps/{ns}/{name}/status` | Phase, URL, replicas, conditions, message. |
-| `GET /apps/{ns}/{name}/logs?lines=200&container=` | Recent pod logs. |
+| `GET /apps/{ns}/{name}/logs?lines=200&container=` | Recent pod logs (`lines` 1–5000, default 200). |
 | `GET /apps/{ns}/{name}/events` | Kubernetes events for the app's resources. |
 | `GET /analytics/summary?namespace=` | Totals and breakdowns by phase / source type / namespace, plus replica readiness. |
 
@@ -73,6 +73,9 @@ The API validates the signature against the realm JWKS, and stamps the caller's
   "access": { "public": false, "groups": ["analytics"], "subdomain": "team-site" }
 }
 ```
+
+`name` must be a valid Kubernetes name — lowercase letters, digits, and hyphens
+(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?$`), at most 53 characters.
 
 The API validates the source before writing the CR, so impossible launches fail fast with a
 `422` and a human-readable `detail`.

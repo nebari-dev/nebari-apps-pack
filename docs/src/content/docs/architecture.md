@@ -48,8 +48,10 @@ Two deliberately different models:
 
 ### The UI and API — app-native OIDC
 
-The UI's `NebariApp` sets `enforceAtGateway: false` and provisions two Keycloak clients:
-a confidential one and a **public SPA client** (`auth.spaClient`). The UI boots
+The UI's `NebariApp` sets `enforceAtGateway: false` and provisions the pack's Keycloak
+clients: a confidential one, a **public SPA client** (`auth.spaClient`), and — when the MCP
+server is enabled — the **device-flow client** (`auth.deviceFlowClient`) used by agent
+logins. The UI boots
 [keycloak-js](https://www.keycloak.org/securing-apps/javascript-adapter) with runtime config
 served by the API (`GET /api/v1/config`), runs the PKCE login flow, and attaches the access
 token to every request. The API validates tokens against the realm **JWKS** (with an
