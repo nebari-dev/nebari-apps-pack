@@ -1,5 +1,5 @@
 ---
-title: Nebari Apps Pack
+title: Apps Pack
 ---
 
 The Nebari Apps Pack lets users launch, manage, and observe **static web apps**
