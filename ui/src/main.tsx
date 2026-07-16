@@ -8,6 +8,7 @@ import { AppDetailPage } from '@/pages/app-detail';
 import { AppsPage } from '@/pages/apps';
 import { DashboardPage } from '@/pages/dashboard';
 import { LaunchPage } from '@/pages/launch';
+import { Toaster } from '@/ui/toast';
 import '@/index.css';
 
 // Initialize auth (and the Keycloak redirect dance) before rendering.
@@ -32,6 +33,7 @@ createRoot(document.getElementById('root')!).render(
           </Route>
         </Routes>
       </BrowserRouter>
+      <Toaster />
     </QueryClientProvider>
   </StrictMode>,
 );

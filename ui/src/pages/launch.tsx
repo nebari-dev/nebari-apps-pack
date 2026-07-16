@@ -5,7 +5,6 @@ import { useNavigate } from 'react-router-dom';
 import { getConfig } from '@/lib/auth';
 import { api } from '@/lib/api';
 import type { AppCreate, EnvVar } from '@/lib/types';
-import { Alert, AlertDescription, AlertTitle } from '@/ui/alert';
 import { Button } from '@/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/ui/card';
 import { Input } from '@/ui/input';
@@ -19,6 +18,7 @@ import {
 } from '@/ui/select';
 import { Switch } from '@/ui/switch';
 import { Tabs, TabsList, TabsPanel, TabsTab } from '@/ui/tabs';
+import { toast } from '@/ui/toast';
 
 const SUBDOMAIN_RE = /^[a-z0-9]([-a-z0-9]*[a-z0-9])?$/;
 
@@ -106,7 +106,15 @@ export function LaunchPage() {
       };
       return api.createApp({ ...base, source } as AppCreate);
     },
-    onSuccess: (app) => void navigate(`/apps/${app.namespace}/${app.name}`),
+    onSuccess: (app) => {
+      toast.success(
+        `Launched ${app.displayName || app.name}`,
+        'Deploying now — status will update on the app page.',
+      );
+      void navigate(`/apps/${app.namespace}/${app.name}`);
+    },
+    onError: (err) =>
+      toast.error('Launch failed', err instanceof Error ? err.message : String(err)),
   });
 
   return (
@@ -274,11 +282,11 @@ export function LaunchPage() {
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="flex flex-col items-start gap-2">
             <Label>Environment variables</Label>
             {envVars.map((env, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: positional editor rows
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex w-full items-center gap-2">
                 <Input
                   placeholder="NAME"
                   className="font-mono"
@@ -354,15 +362,6 @@ export function LaunchPage() {
           </div>
         </CardContent>
       </Card>
-
-      {launch.isError ? (
-        <Alert variant="destructive">
-          <AlertTitle>Launch failed</AlertTitle>
-          <AlertDescription>
-            {launch.error instanceof Error ? launch.error.message : String(launch.error)}
-          </AlertDescription>
-        </Alert>
-      ) : null}
 
       <div className="flex items-center justify-end gap-3">
         {validationError ? <p className="text-muted-foreground text-sm">{validationError}</p> : null}

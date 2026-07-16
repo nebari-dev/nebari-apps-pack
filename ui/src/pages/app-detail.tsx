@@ -9,7 +9,6 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { PhaseBadge, SourceBadge } from '@/components/app-bits';
 import { api } from '@/lib/api';
@@ -28,12 +27,12 @@ import {
 } from '@/ui/dialog';
 import { Spinner } from '@/ui/spinner';
 import { Tabs, TabsList, TabsPanel, TabsTab } from '@/ui/tabs';
+import { toast } from '@/ui/toast';
 
 export function AppDetailPage() {
   const { namespace = '', name = '' } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [actionError, setActionError] = useState('');
 
   const app = useQuery({
     queryKey: ['app', namespace, name],
@@ -57,17 +56,33 @@ export function AppDetailPage() {
     void queryClient.invalidateQueries({ queryKey: ['apps'] });
     void queryClient.invalidateQueries({ queryKey: ['analytics'] });
   };
-  const onError = (err: unknown) => setActionError(err instanceof Error ? err.message : String(err));
+  const errMessage = (err: unknown) => (err instanceof Error ? err.message : String(err));
+  const label = () => app.data?.displayName || name;
 
-  const stop = useMutation({ mutationFn: () => api.stopApp(namespace, name), onSuccess: invalidate, onError });
-  const start = useMutation({ mutationFn: () => api.startApp(namespace, name), onSuccess: invalidate, onError });
+  const stop = useMutation({
+    mutationFn: () => api.stopApp(namespace, name),
+    onSuccess: () => {
+      invalidate();
+      toast.success(`Stopped ${label()}`);
+    },
+    onError: (err) => toast.error(`Failed to stop ${label()}`, errMessage(err)),
+  });
+  const start = useMutation({
+    mutationFn: () => api.startApp(namespace, name),
+    onSuccess: () => {
+      invalidate();
+      toast.success(`Started ${label()}`);
+    },
+    onError: (err) => toast.error(`Failed to start ${label()}`, errMessage(err)),
+  });
   const remove = useMutation({
     mutationFn: () => api.deleteApp(namespace, name),
     onSuccess: () => {
       invalidate();
+      toast.success(`Deleted ${label()}`);
       void navigate('/apps');
     },
-    onError,
+    onError: (err) => toast.error(`Failed to delete ${label()}`, errMessage(err)),
   });
 
   if (app.isLoading) {
@@ -156,13 +171,6 @@ export function AppDetailPage() {
           </Dialog>
         </div>
       </div>
-
-      {actionError ? (
-        <Alert variant="destructive">
-          <AlertTitle>Action failed</AlertTitle>
-          <AlertDescription>{actionError}</AlertDescription>
-        </Alert>
-      ) : null}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <Card>
