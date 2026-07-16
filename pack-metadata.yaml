@@ -6,9 +6,9 @@ description: Launch, manage, and observe static web applications on a Nebari clu
 level: experimental
 owner: jbouder
 deprecated: false
-# nebariapp_integration: full
-# docs_site: false
-# links:
-#   docs: https://packs.nebari.dev/apps-pack/
-# scope:
-#   standalone-supported: false
+nebariapp_integration: full
+docs_site: false
+links:
+  docs: https://packs.nebari.dev/apps-pack/
+scope:
+  standalone-supported: false
