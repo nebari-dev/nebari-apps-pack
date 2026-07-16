@@ -197,15 +197,16 @@ kubectl get apps -n <your-namespace> -w   # wait for Phase=Running, then open th
 ```bash
 cd dev
 make up          # cluster + operator + api + ui + mcp + example app (plain HTTP, no auth)
-open http://apps.nebari.local              # the UI
-open http://docs-site.apps.nebari.local    # the example app
+open http://apps.nebari.test              # the UI
+open http://docs-site.apps.nebari.test    # the example app
 ```
 
-On macOS/Docker Desktop the cluster's LoadBalancer IP is not reachable from the host — run
-`make port-forward` (sudo; it must listen on local port 80) and use the same URLs. Type the
-`http://` scheme explicitly: browsers auto-upgrade bare hostnames to https, which is disabled
-locally. See the [local development guide](docs/src/content/docs/local-development.md) for the
-full dev loop.
+No port-forwarding or `/etc/hosts` edits: a local wildcard-DNS container resolves
+`*.nebari.test` to `127.0.0.1` (one-time `/etc/resolver` file on macOS, offered by `make up`),
+and the kind cluster maps host port 80 straight to the gateway, so every launched app is
+reachable as soon as its route reconciles. Type the `http://` scheme explicitly: browsers
+auto-upgrade bare hostnames to https, which is disabled locally. See the
+[local development guide](docs/src/content/docs/local-development.md) for the full dev loop.
 
 ## Documentation
 

@@ -1,0 +1,21 @@
+# kind cluster config for the local dev stack.
+#
+# Maps host ports 80/443 to fixed NodePorts on the node so the Envoy
+# gateway Service (pinned to 30080/30443 by the EnvoyProxy resource in
+# the Makefile) is reachable at http://localhost:80 with no
+# port-forwarding — works on Docker Desktop, where the kind network is
+# not routable from the host.
+#
+# Port mappings only apply at cluster creation: after editing this file,
+# recreate the cluster with `make down && make up`.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+    extraPortMappings:
+      - containerPort: 30080
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 30443
+        hostPort: 443
+        protocol: TCP
