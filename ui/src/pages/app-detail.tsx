@@ -133,6 +133,9 @@ export function AppDetailPage() {
 
   const a = app.data;
   const stopped = (a.status.replicas?.desired ?? a.runtime?.replicas ?? 1) === 0;
+  // Only offer the app's URL while it can actually serve: stopped or
+  // still-deploying apps would just show a gateway error.
+  const ready = a.status.phase === 'Running';
   const manifest = toManifest(a);
 
   const filteredLogs = filterLogs(logs.data?.logs ?? '', logSearch);
@@ -170,7 +173,13 @@ export function AppDetailPage() {
         </div>
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
           {a.status.url ? (
-            <Button variant="outline" render={<a href={a.status.url} target="_blank" rel="noreferrer">Open <ExternalLink /></a>} />
+            ready ? (
+              <Button variant="outline" render={<a href={a.status.url} target="_blank" rel="noreferrer">Open <ExternalLink /></a>} />
+            ) : (
+              <Button variant="outline" disabled>
+                Open <ExternalLink />
+              </Button>
+            )
           ) : null}
           <Button variant="outline" render={<Link to={`/apps/${namespace}/${name}/edit`}>Edit <Pencil /></Link>} />
           {stopped ? (
@@ -198,9 +207,15 @@ export function AppDetailPage() {
           </CardHeader>
           <CardContent>
             {a.status.url ? (
-              <a className="break-all font-mono text-sm underline" href={a.status.url} target="_blank" rel="noreferrer">
-                {a.status.url}
-              </a>
+              ready ? (
+                <a className="break-all font-mono text-sm underline" href={a.status.url} target="_blank" rel="noreferrer">
+                  {a.status.url}
+                </a>
+              ) : (
+                <p className="break-all font-mono text-muted-foreground text-sm" title="App is not running">
+                  {a.status.url}
+                </p>
+              )
             ) : (
               <p className="text-muted-foreground text-sm">Not routed yet</p>
             )}
