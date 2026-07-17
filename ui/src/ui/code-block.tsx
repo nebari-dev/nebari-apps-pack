@@ -8,7 +8,7 @@ import {
   useContext,
   useState,
 } from 'react';
-import { cn } from '@/lib/utils';
+import { cn, copyText } from '@/lib/utils';
 
 interface CodeBlockContextValue {
   /** The raw snippet, shared so descendants don't re-thread the text. */
@@ -288,12 +288,12 @@ function CodeBlockCopyButton({
     async (event: React.MouseEvent<HTMLButtonElement>) => {
       onClick?.(event);
       try {
-        await navigator.clipboard.writeText(code);
+        await copyText(code);
         setCopied(true);
         window.setTimeout(() => setCopied(false), 2000);
       } catch {
-        // Insecure context or a denied permission rejects writeText — keep the
-        // button resting rather than flashing a false confirmation.
+        // A denied permission rejects — keep the button resting rather than
+        // flashing a false confirmation.
         setCopied(false);
       }
     },

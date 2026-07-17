@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/ui/button';
 import { Card, CardContent } from '@/ui/card';
 import { toast } from '@/ui/toast';
+import { copyText } from '@/lib/utils';
 
 /** First-run guidance shown when no apps exist yet. */
 export function Onboarding() {
@@ -12,7 +13,7 @@ export function Onboarding() {
 
   const copy = async () => {
     try {
-      await navigator.clipboard.writeText(mcpEndpoint);
+      await copyText(mcpEndpoint);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
