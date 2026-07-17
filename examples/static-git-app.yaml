@@ -14,7 +14,7 @@ spec:
     git:
       url: https://github.com/nebari-dev/nebari-apps-pack
       ref: main
-      subdir: examples/site
+      subdir: examples/static
   runtime:
     replicas: 1
   access:
